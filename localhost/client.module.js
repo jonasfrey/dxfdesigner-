@@ -285,7 +285,7 @@ let f_a_o_item = function(){
 
        // Function to draw objects to DXF and SVG
        function drawObjectsToDXFAndSVG(a_o_items) {
-        const d = new Drawing();
+        o_dxf = new Drawing();
         o_dxf.setUnits('millimeters');
 
         // Create SVG element
