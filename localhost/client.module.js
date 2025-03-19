@@ -302,7 +302,7 @@ let o = await f_o_html_from_o_js(
                                     const blob = new Blob([o_dxf.toDxfString()], { type: "application/dxf" });
                                     const link = document.createElement("a");
                                     link.href = URL.createObjectURL(blob);
-                                    link.download = `${o_state.o_function.s_name}.dxf`;
+                                    link.download = `${o_state.s_name}.dxf`;
                                     link.click();
 
                                 }
