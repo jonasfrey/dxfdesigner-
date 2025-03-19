@@ -59,6 +59,7 @@ let f_callback_aftervaluechange = function(a_s_path, v_old, v_new){
 let o_div = document;
 let o_state = f_o_proxified_and_add_listeners(
     {
+        s_name: "asdf",// ugly work around
         o_function: null,
         a_o_function:[
             {
@@ -149,6 +150,102 @@ let o_state = f_o_proxified_and_add_listeners(
                         })
                     ]
                 }`
+            }, 
+            {
+                s_name: "reg_poly_loop", 
+                s_function:`function() {
+                    let f_o_vec2 = function (n_trn_x, n_trn_y) { return { n_trn_x, n_trn_y } }
+                    let f_o_line = function (o_trn, o_trn2) { return { o_trn, o_trn2 } }
+                    let f_o_circle = function (o_trn, n_radius) { return { o_trn, n_radius } }
+                    let f_o_reg_poly = function (o_trn, n_radius, n_corners, n_offset_radians) { return { o_trn, n_radius, n_corners, n_offset_radians } }
+                
+                
+                    let a_o = [];
+                    let n_its = 10.;
+                    let n_radius_factor = 200.;
+                    let n_tau = Math.PI * 2;
+                    for (let n_it = 0; n_it < n_its; n_it += 1) {
+                        let n_it_nor = n_it / n_its;
+                        console.log({ n_it_nor })
+                        a_o.push(
+                            f_o_reg_poly(
+                                f_o_vec2(0, 0),
+                                Math.pow(n_it_nor,1./4.)*n_radius_factor,
+                                3,
+                                n_it_nor*2
+                            )
+                        )
+                
+                    }
+                    return a_o
+                
+                }`
+            }, 
+            {
+                s_name: "touching_pentagons", 
+                s_function: `function generateTouchingPentagons() {
+                    let f_o_vec2 = function(n_trn_x, n_trn_y) { return { n_trn_x, n_trn_y }; };
+                    let f_o_reg_poly = function(o_trn, n_radius, n_corners, n_offset_radians) {
+                        return { o_trn, n_radius, n_corners, n_offset_radians };
+                    };
+                
+                    let a_o = [];
+                    let n_its = 10; // Number of polygons
+                    let n_initial_radius = 20; // Initial radius of the first polygon
+                    let n_scaling_factor = 1 / Math.cos(Math.PI / 5); // Scaling factor for radius
+                    let n_rotation_angle = Math.PI / 5; // Rotation angle for each polygon
+                
+                    for (let n_it = 0; n_it < n_its; n_it++) {
+                        let n_radius = n_initial_radius * Math.pow(n_scaling_factor, n_it);
+                        let n_offset_radians = n_rotation_angle * n_it;
+                
+                        a_o.push(
+                            f_o_reg_poly(
+                                f_o_vec2(0, 0), // Center of the polygon
+                                n_radius, // Radius of the polygon
+                                5, // Number of sides (pentagon)
+                                n_offset_radians // Rotation offset
+                            )
+                        );
+                    }
+                
+                    return a_o;
+                }`
+            },
+            {
+                s_name: 'touching_n_gons', 
+                s_function: `function(){
+                    let f_a_o_touching_n_gons = function (n_sides, n_its, n_initial_radius) {
+                        let f_o_vec2 = function (n_trn_x, n_trn_y) { return { n_trn_x, n_trn_y }; };
+                        let f_o_reg_poly = function (o_trn, n_radius, n_corners, n_offset_radians) {
+                            return { o_trn, n_radius, n_corners, n_offset_radians };
+                        };
+                
+                        let a_o = []; // Array to store the polygons
+                        let n_scaling_factor = 1 / Math.cos(Math.PI / n_sides); // Scaling factor for radius
+                        let n_rotation_angle = Math.PI / n_sides; // Rotation angle for each polygon
+                
+                        for (let n_it = 0; n_it < n_its; n_it++) {
+                            let n_radius = n_initial_radius * Math.pow(n_scaling_factor, n_it);
+                            let n_offset_radians = n_rotation_angle * n_it;
+                
+                            a_o.push(
+                                f_o_reg_poly(
+                                    f_o_vec2(0, 0), // Center of the polygon
+                                    n_radius, // Radius of the polygon
+                                    n_sides, // Number of sides
+                                    n_offset_radians // Rotation offset
+                                )
+                            );
+                        }
+                
+                        return a_o;
+                    }
+                    return f_a_o_touching_n_gons(3, 10, 20)
+                
+                }
+                
+                `
             }
         ],
         a_s_name: [
@@ -236,13 +333,14 @@ let o = await f_o_html_from_o_js(
                                     }else{
                                         o_state.o_function = o_state.a_o_function.find(o=>{return o.s_name == s_name});
                                     }
+                                    o_state.s_name = o_state.o_function.s_name
                                     f_update_from_o_function(o_state.o_function)
 
                                 }
                             }, 
                             {
                                 s_tag: "input", 
-                                a_s_prop_sync: `o_function.s_name`
+                                a_s_prop_sync: `s_name`
                             }
                         ]
                     }
