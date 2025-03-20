@@ -352,6 +352,44 @@ let o_state = f_o_proxified_and_add_listeners(
                        
                     ]
                 }`
+            }, 
+            {
+                s_name: 'loops2', 
+                s_function: `function(){
+                    let f_o_vec2 = function(n_trn_x, n_trn_y){return {n_trn_x, n_trn_y}}
+                    let f_o_line = function(o_trn, o_trn2){return {o_trn, o_trn2}}
+                    let f_o_circle = function(o_trn, n_radius){return {o_trn, n_radius}}
+                    let f_o_reg_poly = function(o_trn, n_radius, n_corners, n_offset_radians){return {o_trn, n_radius, n_corners, n_offset_radians}}
+                
+                    let n_its_corners = 5
+                    let n_its_polygons = 10
+                    
+                    let n_tau = Math.PI*2;
+                    let n_its1 = 10;
+                    let n_its2 = 10;
+                    let a_o = []
+            
+                    for(let n_it1 = 0; n_it1 < n_its1; n_it1+=1){
+                        let n_it1_nor = n_it1/n_its1;
+                        let n_amp1 = 100;
+                        let o_trn = f_o_vec2(
+                            Math.cos(n_it1_nor*n_tau)*n_amp1, 
+                            Math.sin(n_it1_nor*n_tau)*n_amp1, 
+                        );
+                        for(let n_it2 = 0; n_it2 < n_its2; n_it2+=1){
+                            let n_it2_nor = n_it2/n_its2;
+                            let n_amp = n_it1_nor * 100;
+                            a_o.push(
+                                f_o_circle(
+                                    o_trn, 
+                                    n_amp
+                                )
+                            )
+                            
+                        }
+                    }
+            
+            }`
             }
         ],
         a_s_name: [
