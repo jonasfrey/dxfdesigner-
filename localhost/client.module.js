@@ -405,7 +405,7 @@ let o = await f_o_html_from_o_js(
                                 innerText: "download", 
                                 onclick: ()=>{
                                     // Download DXF
-                                    const blob = new Blob([o_dxf.toString()], { type: "application/dxf" });
+                                    const blob = new Blob([o_dxf.stringify()], { type: "application/dxf" });
                                     const link = document.createElement("a");
                                     link.href = URL.createObjectURL(blob);
                                     link.download = `${o_state.s_name}.dxf`;
@@ -678,11 +678,11 @@ let f_a_o = function(){
 
 }
 
-let a_o_test = f_a_o();
-console.log(a_o_test)
-drawObjectsToDXFAndSVG(a_o_test);
-const blob = new Blob([o_dxf.stringify()], { type: "application/dxf" });
-const link = document.createElement("a");
-link.href = URL.createObjectURL(blob);
-link.download = `atest.dxf`;
-link.click();
+// let a_o_test = f_a_o();
+// console.log(a_o_test)
+// drawObjectsToDXFAndSVG(a_o_test);
+// const blob = new Blob([o_dxf.stringify()], { type: "application/dxf" });
+// const link = document.createElement("a");
+// link.href = URL.createObjectURL(blob);
+// link.download = `atest.dxf`;
+// link.click();
