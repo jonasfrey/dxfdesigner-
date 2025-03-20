@@ -405,7 +405,7 @@ let o = await f_o_html_from_o_js(
                                 innerText: "download", 
                                 onclick: ()=>{
                                     // Download DXF
-                                    const blob = new Blob([o_dxf.toDxfString()], { type: "application/dxf" });
+                                    const blob = new Blob([o_dxf.toString()], { type: "application/dxf" });
                                     const link = document.createElement("a");
                                     link.href = URL.createObjectURL(blob);
                                     link.download = `${o_state.s_name}.dxf`;
