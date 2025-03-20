@@ -29,12 +29,10 @@ f_add_css(
     `
 );
 
+import * as o_mod from "./@tarikjabiri/dxf/lib/index.esm.js";
 
-// import Drawing from 'https://cdn.jsdelivr.net/npm/dxf-writer@1.18.4/+esm';
-import Drawing from './dxf_writer.module.js';
 
-let o_dxf = new Drawing();
-o_dxf.setUnits('millimeters');
+let o_dxf;
 
 
 
@@ -246,6 +244,114 @@ let o_state = f_o_proxified_and_add_listeners(
                 }
                 
                 `
+            }, 
+            {
+                s_name:  'continious_line_start', 
+                s_function: `function generateStar() {
+                    let f_o_vec2 = function (n_trn_x, n_trn_y) { return { n_trn_x, n_trn_y }; };
+                    let f_o_line = function (o_trn, o_trn2) { return { o_trn, o_trn2 }; };
+                
+                    let a_o = [];
+                    let n_points = 5; // Number of star points
+                    let n_outer_radius = 100; // Radius of the outer points
+                    let n_inner_radius = 50; // Radius of the inner points
+                    let n_tau = Math.PI * 2; // Full circle in radians
+                
+                    for (let n_it = 0; n_it <= n_points * 2; n_it += 1) {
+                        let n_radius = n_it % 2 === 0 ? n_outer_radius : n_inner_radius;
+                        let n_angle = (n_it / n_points) * n_tau;
+                        let o_point = f_o_vec2(
+                            Math.sin(n_angle) * n_radius,
+                            Math.cos(n_angle) * n_radius
+                        );
+                
+                        if (n_it > 0) {
+                            a_o.push(f_o_line(o_previous_point, o_point));
+                        }
+                        o_previous_point = o_point;
+                    }
+                    return a_o;
+                }
+                
+                // Draw the star
+                return generateStar();`
+            }, 
+            {
+                s_name : 'something', 
+                s_function : `function(){
+                    let f_o_vec2 = function(n_trn_x, n_trn_y){return {n_trn_x, n_trn_y}}
+                    let f_o_line = function(o_trn, o_trn2){return {o_trn, o_trn2}}
+                    let f_o_circle = function(o_trn, n_radius){return {o_trn, n_radius}}
+                    let f_o_reg_poly = function(o_trn, n_radius, n_corners, n_offset_radians){return {o_trn, n_radius, n_corners, n_offset_radians}}
+                
+                    let n_its = 5
+                    return [
+                        ...new Array(n_its).fill(0).map((v, n_idx)=>{
+                            let n_it= parseFloat(n_idx);
+                            let n_tau = Math.PI*2;
+                            let n_amp = 200;
+                            let n_it_nor = n_it/n_its;
+                            let n_it_nor2 = ((n_it+1)%n_its)/n_its
+                            let o_prev = f_o_vec2(
+                                        Math.sin(n_tau*n_it_nor)*n_amp,
+                                        Math.cos(n_tau*n_it_nor)*n_amp
+                                    );
+                            let o_next = f_o_vec2(
+                                        Math.sin(n_tau*n_it_nor2)*n_amp,
+                                        Math.cos(n_tau*n_it_nor2)*n_amp
+                                    )
+                            return [
+                                f_o_line(
+                                    f_o_vec2(0,0),
+                                    o_prev
+                                ), 
+                                f_o_line(o_prev, o_next)
+                            ]
+                        }).flat()
+                    ]
+                }`
+            }, 
+            {
+                s_name: 'something2', 
+                s_function: `function(){
+                    let f_o_vec2 = function(n_trn_x, n_trn_y){return {n_trn_x, n_trn_y}}
+                    let f_o_line = function(o_trn, o_trn2){return {o_trn, o_trn2}}
+                    let f_o_circle = function(o_trn, n_radius){return {o_trn, n_radius}}
+                    let f_o_reg_poly = function(o_trn, n_radius, n_corners, n_offset_radians){return {o_trn, n_radius, n_corners, n_offset_radians}}
+                
+                    let n_its_corners = 5
+                    let n_its_polygons = 10
+                    
+                    return [
+                        ...new Array(n_its_polygons).fill(0).map((v, n_idx1)=>{
+                            let n_it1_nor = parseInt(n_idx1)/n_its_polygons;
+                            return new Array(n_its_corners).fill(0).map((v, n_idx)=>{
+                            let n_it= parseFloat(n_idx);
+                            let n_tau = Math.PI*2;
+                            let n_amp = parseFloat(n_it1_nor)*250;
+                            n_it+=(0.5)*(n_idx1%2);
+                            let n_it_nor = n_it/n_its_corners;
+                            let n_it_nor2 = ((n_it+1)%n_its_corners)/n_its_corners
+                            let o_prev = f_o_vec2(
+                                        Math.sin(n_tau*n_it_nor)*n_amp,
+                                        Math.cos(n_tau*n_it_nor)*n_amp
+                                    );
+                            let o_next = f_o_vec2(
+                                        Math.sin(n_tau*n_it_nor2)*n_amp,
+                                        Math.cos(n_tau*n_it_nor2)*n_amp
+                                    )
+                            return [
+                                f_o_line(
+                                    f_o_vec2(0,0),
+                                    o_prev
+                                ), 
+                                f_o_line(o_prev, o_next)
+                            ]
+                        }).flat()
+                        }).flat()
+                       
+                    ]
+                }`
             }
         ],
         a_s_name: [
@@ -381,89 +487,129 @@ let f_a_o_item = function(){
     ]
 }
 
-       // Function to draw objects to DXF and SVG
-       function drawObjectsToDXFAndSVG(a_o_items) {
-        o_dxf = new Drawing();
-        o_dxf.setUnits('millimeters');
+function drawObjectsToDXFAndSVG(a_o_items) {
+    // Initialize DXF
+    o_dxf = new o_mod.DxfWriter();
+    
+    // Create SVG element
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    let o_el_div = document.querySelector('#svg');
+    
+    o_el_div.innerHTML = '';
+    o_el_div?.appendChild(svg);
+    svg.setAttribute("width", "500");
+    svg.setAttribute("height", "500");
+    svg.setAttribute("viewBox", "0 0 500 500");
 
-        // Create SVG element
-        const svgNS = "http://www.w3.org/2000/svg";
-        const svg = document.createElementNS(svgNS, "svg");
-        // let svg = o_el_svg;
-        let o_el_div = document.querySelector('#svg')
-        
-        o_el_div.innerHTML = ''
-        o_el_div?.appendChild(svg)
-        svg.setAttribute("width", "500");
-        svg.setAttribute("height", "500");
-        svg.setAttribute("viewBox", "0 0 500 500");
+    // Apply a transform to flip the y-axis
+    const g = document.createElementNS(svgNS, "g");
+    g.setAttribute("transform", "scale(1, -1) translate(0, -500)");
+    svg.appendChild(g);
 
-        let n_trn_x_center = 500/2;
-        let n_trn_y_center = 500/2;
-        
-        // Iterate over objects
-        a_o_items.forEach(o_item => {
-            for(let s_prop in o_item){
-                if(s_prop.startsWith('o_trn')){
-                    o_item[s_prop].n_trn_x+=n_trn_x_center;
-                    o_item[s_prop].n_trn_y+=n_trn_y_center;
-                }
-            }
-
-            if (o_item.o_trn && o_item.o_trn2) {
-                // Draw line
-                o_dxf.drawLine([o_item.o_trn.n_trn_x, o_item.o_trn.n_trn_y], [o_item.o_trn2.n_trn_x, o_item.o_trn2.n_trn_y]);
-
-                const line = document.createElementNS(svgNS, "line");
-                line.setAttribute("x1", o_item.o_trn.n_trn_x);
-                line.setAttribute("y1", o_item.o_trn.n_trn_y);
-                line.setAttribute("x2", o_item.o_trn2.n_trn_x);
-                line.setAttribute("y2", o_item.o_trn2.n_trn_y);
-                line.setAttribute("stroke", "white");
-                svg.appendChild(line);
-            } else if (o_item.o_trn && o_item.n_radius && !o_item.n_corners) {
-                // Draw circle
-                o_dxf.drawCircle(o_item.o_trn.n_trn_x, o_item.o_trn.n_trn_y, o_item.n_radius);
-
-                const circle = document.createElementNS(svgNS, "circle");
-                circle.setAttribute("cx", o_item.o_trn.n_trn_x);
-                circle.setAttribute("cy", o_item.o_trn.n_trn_y);
-                circle.setAttribute("r", o_item.n_radius);
-                circle.setAttribute("fill", "none");
-                circle.setAttribute("stroke", "white");
-                svg.appendChild(circle);
-            } else if (o_item.o_trn && o_item.n_radius && o_item.n_corners) {
-                // Draw regular polygon
-                const vertices = createRegularPolygon(o_item.o_trn.n_trn_x, o_item.o_trn.n_trn_y, o_item.n_radius, o_item.n_corners, o_item.n_offset_radians);
-                o_dxf.drawPolyline(vertices.map(v => [v.x, v.y]));
-
-                const polygon = document.createElementNS(svgNS, "polygon");
-                const points = vertices.map(v => `${v.x},${v.y}`).join(" ");
-                polygon.setAttribute("points", points);
-                polygon.setAttribute("fill", "none");
-                polygon.setAttribute("stroke", "white");
-                svg.appendChild(polygon);
-            }
-        });
-
-
-    }
-
-    // Function to create a regular polygon
-    function createRegularPolygon(x, y, radius, corners, n_offset_radians = 0) {
-        const vertices = [];
-        for (let i = 0; i < corners; i++) {
-            const angle = (Math.PI * 2 * i) / corners;
-            const px = x + radius * Math.cos(angle+n_offset_radians);
-            const py = y + radius * Math.sin(angle+n_offset_radians);
-            vertices.push({ x: px, y: py });
+    // Center of the SVG canvas
+    let n_trn_x_center = 250; // 500 / 2
+    let n_trn_y_center = 250; // 500 / 2
+    let o_trn;
+    let o_trn2;
+    // Iterate over objects
+    a_o_items.forEach(o_item => {
+        // Use original coordinates (no y-axis flip needed)
+        if(o_item.o_trn){
+            o_trn = {
+                n_trn_x: o_item.o_trn.n_trn_x + n_trn_x_center,
+                n_trn_y: o_item.o_trn.n_trn_y + n_trn_y_center
+            };
         }
-        // Close the loop by adding the first vertex again
-        vertices.push(vertices[0]);
-        return vertices;
-    }
+        if(o_item.o_trn2){
+            o_trn2 = {
+                n_trn_x: o_item.o_trn2.n_trn_x + n_trn_x_center,
+                n_trn_y: o_item.o_trn2.n_trn_y + n_trn_y_center
+            };
+        }
 
-require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.33.0/min/vs' }});
+        if (o_item.o_trn && o_item.o_trn2) {
+            // Draw line to DXF
+            // o_mod.addEntities(
+            //     new o_mod.Line(o_dxf, ,o_trn2.n_trn_x, o_trn2.n_trn_y)
+            // );
+            o_dxf.addLine(o_mod.point3d(o_trn.n_trn_x, o_trn.n_trn_y), o_mod.point3d(o_trn2.n_trn_x, o_trn2.n_trn_y))
+
+            // Draw line to SVG
+            const line = document.createElementNS(svgNS, "line");
+            line.setAttribute("x1", o_trn.n_trn_x);
+            line.setAttribute("y1", o_trn.n_trn_y);
+            line.setAttribute("x2", o_trn2.n_trn_x);
+            line.setAttribute("y2", o_trn2.n_trn_y);
+            line.setAttribute("stroke", "white");
+            g.appendChild(line); // Append to the transformed group
+        } else if (o_item.o_trn && o_item.n_radius && !o_item.n_corners) {
+            // Draw circle to DXF
+            // o_dxf.addEntities(
+            //     new o_mod.Circle(o_dxf, o_trn.n_trn_x, o_trn.n_trn_y, o_item.n_radius),
+            // );
+            o_dxf.addCircle(o_mod.point3d(o_trn.n_trn_x, o_trn.n_trn_y), o_item.n_radius)
+
+            // Draw circle to SVG
+            const circle = document.createElementNS(svgNS, "circle");
+            circle.setAttribute("cx", o_trn.n_trn_x);
+            circle.setAttribute("cy", o_trn.n_trn_y);
+            circle.setAttribute("r", o_item.n_radius);
+            circle.setAttribute("fill", "none");
+            circle.setAttribute("stroke", "white");
+            g.appendChild(circle); // Append to the transformed group
+        } else if (o_item.o_trn && o_item.n_radius && o_item.n_corners) {
+            // Draw regular polygon to DXF
+            const vertices = createRegularPolygon(
+                o_trn.n_trn_x,
+                o_trn.n_trn_y,
+                o_item.n_radius,
+                o_item.n_corners,
+                o_item.n_offset_radians
+            );
+            // o_dxf.addEntities(
+            //     new o_mod.LwPolyline(o_dxf, vertices.map(v => [v.x, v.y]), true),
+            // );
+   
+            // const polyline = new o_mod.HatchPolylineBoundary();
+            // vertices.forEach(v => polyline.add(o_mod.vertex(v.x, v.y)))
+            
+            o_dxf.addLWPolyline(
+                vertices.map(v => { return {point:o_mod.point2d(v.x, v.y)}})
+            );
+
+            // o_dxf.addPolyLine(vertices.map(v => o_mod.point3d(v.x,v.y)));
+            // Draw regular polygon to SVG
+            const polygon = document.createElementNS(svgNS, "polygon");
+            const points = vertices.map(v => `${v.x},${v.y}`).join(" ");
+            polygon.setAttribute("points", points);
+            polygon.setAttribute("fill", "none");
+            polygon.setAttribute("stroke", "white");
+            g.appendChild(polygon); // Append to the transformed group
+        }
+    });
+}
+
+// Function to create a regular polygon
+function createRegularPolygon(x, y, radius, corners, n_offset_radians = 0) {
+    const vertices = [];
+    for (let i = 0; i < corners; i++) {
+        const angle = (Math.PI * 2 * i) / corners + n_offset_radians;
+        const px = x + radius * Math.cos(angle);
+        const py = y - radius * Math.sin(angle); // Flip y-axis for SVG
+        vertices.push({ x: px, y: py });
+    }
+    // Close the loop by adding the first vertex again
+    vertices.push(vertices[0]);
+    return vertices;
+}
+// import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm';
+
+
+// require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.33.0/min/vs' }});
+// require.config({ paths: { 'vs': './monaco-editor-0.52.2/package/min/vs' }});
+require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs' }});
+
 let o_monaco_editor = null;
 require(['vs/editor/editor.main'], function() {
     o_monaco_editor = monaco.editor.create(document.getElementById('editor'), {
@@ -494,3 +640,49 @@ let f_update_from_o_function = function(o_function){
         );
     }
 }
+
+
+let f_a_o = function(){
+    let f_o_vec2 = function(n_trn_x, n_trn_y){return {n_trn_x, n_trn_y}}
+    let f_o_line = function(o_trn, o_trn2){return {o_trn, o_trn2}}
+    let f_o_circle = function(o_trn, n_radius){return {o_trn, n_radius}}
+    let f_o_reg_poly = function(o_trn, n_radius, n_corners, n_offset_radians){return {o_trn, n_radius, n_corners, n_offset_radians}}
+
+    let n_its = 3.;
+    let n_radius = 200; 
+    let n_tau = Math.PI*2.;
+    let a_o = [
+        f_o_circle(
+            f_o_vec2(0,0), n_radius
+        ), 
+        f_o_reg_poly(
+            f_o_vec2(0,0),
+            40, 
+            4, 
+            0.2
+        )
+    ]
+    for(let n_it = 0.; n_it < n_its; n_it+=1){
+        let n_it_nor = n_it / n_its;
+        a_o.push(
+            f_o_line(
+                f_o_vec2(0,0), 
+                f_o_vec2(
+                    Math.cos(n_it_nor*n_tau)*n_radius, 
+                    Math.sin(n_it_nor*n_tau)*n_radius
+                )
+            )
+        )
+    }
+    return a_o
+
+}
+
+let a_o_test = f_a_o();
+console.log(a_o_test)
+drawObjectsToDXFAndSVG(a_o_test);
+const blob = new Blob([o_dxf.stringify()], { type: "application/dxf" });
+const link = document.createElement("a");
+link.href = URL.createObjectURL(blob);
+link.download = `atest.dxf`;
+link.click();
