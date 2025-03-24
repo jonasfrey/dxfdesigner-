@@ -365,8 +365,8 @@ let o_state = f_o_proxified_and_add_listeners(
                     let n_its_polygons = 10
                     
                     let n_tau = Math.PI*2;
-                    let n_its1 = 10;
-                    let n_its2 = 10;
+                    let n_its1 = 6;
+                    let n_its2 = 5;
                     let a_o = []
             
                     for(let n_it1 = 0; n_it1 < n_its1; n_it1+=1){
@@ -378,7 +378,7 @@ let o_state = f_o_proxified_and_add_listeners(
                         );
                         for(let n_it2 = 0; n_it2 < n_its2; n_it2+=1){
                             let n_it2_nor = n_it2/n_its2;
-                            let n_amp = n_it1_nor * 100;
+                            let n_amp = n_it2_nor * 100;
                             a_o.push(
                                 f_o_circle(
                                     o_trn, 
@@ -389,6 +389,7 @@ let o_state = f_o_proxified_and_add_listeners(
                         }
                     }
             
+            return a_o
             }`
             }
         ],
