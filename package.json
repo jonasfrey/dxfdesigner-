@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "@tarikjabiri/dxf": "^2.8.9"
+    "@tarikjabiri/dxf": "^2.8.9",
+    "three": "^0.174.0"
   }
 }

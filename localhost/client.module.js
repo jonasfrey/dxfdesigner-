@@ -11,6 +11,13 @@ import {
     f_o_proxified_and_add_listeners
 } from "https://deno.land/x/handyhelpers@5.1.96/mod.js"
 
+import * as THREE from '/three/build/three.module.min.js';
+// import { OrbitControls } from '/three/build/three.module.min.js';
+import {OrbitControls} from '/three/OrbitControls.js';
+// import * as o_mod2 from 'https://aitne:8443/three/examples/jsm/controls/OrbitControls.js';
+
+// console.log(o_mod2);
+// debugger
 
 o_variables.n_rem_font_size_base = 1. // adjust font size, other variables can also be adapted before adding the css to the dom
 o_variables.n_rem_padding_interactive_elements = 0.5; // adjust padding for interactive elements 
@@ -49,14 +56,15 @@ let f_callback_aftervaluechange = function(a_s_path, v_old, v_new){
     console.log('a_s_path')
     console.log(a_s_path)
     let s_path = a_s_path.join('.');
-    if(s_path == 'a_o_person.0.s_name'){
-        console.log('name of first person has been changed')
+    if(s_path == 'n_thickness'){
+        f_update_rendering();
     }
 }
 
 let o_div = document;
 let o_state = f_o_proxified_and_add_listeners(
     {
+        n_thickness :0.5, 
         s_name: "asdf",// ugly work around
         o_function: null,
         a_o_function:[
@@ -481,6 +489,9 @@ let o = await f_o_html_from_o_js(
                                 // }
                             }, 
                             {
+                                id: 'canvas',
+                            },
+                            {
                                 s_tag: "button", 
                                 innerText: "download", 
                                 onclick: ()=>{
@@ -527,6 +538,11 @@ let o = await f_o_html_from_o_js(
                             {
                                 s_tag: "input", 
                                 a_s_prop_sync: `s_name`
+                            }, 
+                            {
+                                s_tag: "input", 
+                                type: 'number',
+                                a_s_prop_sync: `n_thickness`
                             }
                         ]
                     }
@@ -565,6 +581,179 @@ let f_a_o_item = function(){
             )
         })
     ]
+}
+// Creates a tube along a path (for lines/polygon edges)
+function f_create_tube(a_o_points, n_radius = 0.5, n_segments = 8) {
+    const a_points = a_o_points.map(o => new THREE.Vector3(o.n_trn_x, o.n_trn_y, 0));
+    const o_curve = new THREE.CatmullRomCurve3(a_points);
+    return new THREE.TubeGeometry(o_curve, 20, n_radius, n_segments, false);
+}
+
+// Creates a torus (for circles)
+function f_create_torus(o_center, n_radius, n_thickness = 0.5, n_segments = 32, material) {
+    const o_geometry = new THREE.TorusGeometry(n_radius, n_thickness, n_segments, 32);
+    const o_mesh = new THREE.Mesh(o_geometry, material);
+    o_mesh.position.set(o_center.n_trn_x, o_center.n_trn_y, 0);
+    return o_mesh;
+}
+
+
+
+
+function createThreeJSObjects(a_o_items) {
+    // Clear existing objects (keep lights)
+    scene.children.slice().forEach(child => {
+        if (!(child instanceof THREE.Light)) scene.remove(child);
+    });
+
+    // Shared material
+    const material = new THREE.MeshPhongMaterial({ 
+        color: 0x00aaff,
+        flatShading: true
+    });
+
+    // Center of the scene (similar to SVG)
+    const n_trn_x_center = 0;
+    const n_trn_y_center = 0;
+
+    a_o_items.forEach(o_item => {
+        // Convert coordinates (same as before)
+        let o_trn, o_trn2;
+        
+        if(o_item.o_trn){
+            o_trn = {
+                n_trn_x: o_item.o_trn.n_trn_x + n_trn_x_center,
+                n_trn_y: o_item.o_trn.n_trn_y + n_trn_y_center
+            };
+        }
+        if(o_item.o_trn2){
+            o_trn2 = {
+                n_trn_x: o_item.o_trn2.n_trn_x + n_trn_x_center,
+                n_trn_y: o_item.o_trn2.n_trn_y + n_trn_y_center
+            };
+        }
+
+
+        // Case 1: Line → Tube
+        if (o_item.o_trn && o_item.o_trn2) {
+            const o_geometry = f_create_tube([o_item.o_trn, o_item.o_trn2], o_state.n_thickness);
+            scene.add(new THREE.Mesh(o_geometry, material));
+        }
+
+        // Case 2: Circle → Torus
+        else if (o_item.o_trn && o_item.n_radius && !o_item.n_corners) {
+            scene.add(f_create_torus(o_trn, o_item.n_radius, o_state.n_thickness, 32, material));
+        }
+
+        // Case 3: Polygon → Tubes for each edge
+        else if (o_item.o_trn && o_item.n_radius && o_item.n_corners) {
+            const a_vertices = createRegularPolygon(
+                o_trn.n_trn_x,
+                o_trn.n_trn_y,
+                o_item.n_radius,
+                o_item.n_corners,
+                o_item.n_offset_radians
+            );
+
+            // Create tubes between each vertex
+            for (let i = 0; i < a_vertices.length - 1; i++) {
+                const o_start = { n_trn_x: a_vertices[i].x, n_trn_y: a_vertices[i].y };
+                const o_end = { n_trn_x: a_vertices[i + 1].x, n_trn_y: a_vertices[i + 1].y };
+                const o_geometry = f_create_tube([o_start, o_end], o_state.n_thickness);
+                scene.add(new THREE.Mesh(o_geometry, material));
+            }
+        }
+    });
+
+    fitCameraToObject(camera, scene, renderer);
+}
+
+function createThreeJSObjects2(a_o_items) {
+    // Clear existing objects (except lights)
+    scene.children.slice().forEach(child => {
+        if (!(child instanceof THREE.Light)) {
+            scene.remove(child);
+        }
+    });
+
+    // Center of the scene (similar to SVG)
+    const n_trn_x_center = 0;
+    const n_trn_y_center = 0;
+    
+    // Material for all objects
+    const material = new THREE.MeshBasicMaterial({ 
+        color: 0xffffff,
+        side: THREE.DoubleSide,
+        wireframe: true
+    });
+    
+    // Line material
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+
+    a_o_items.forEach(o_item => {
+        // Convert coordinates (similar to SVG conversion)
+        let o_trn, o_trn2;
+        
+        if(o_item.o_trn){
+            o_trn = {
+                n_trn_x: o_item.o_trn.n_trn_x + n_trn_x_center,
+                n_trn_y: o_item.o_trn.n_trn_y + n_trn_y_center
+            };
+        }
+        if(o_item.o_trn2){
+            o_trn2 = {
+                n_trn_x: o_item.o_trn2.n_trn_x + n_trn_x_center,
+                n_trn_y: o_item.o_trn2.n_trn_y + n_trn_y_center
+            };
+        }
+
+        if (o_item.o_trn && o_item.o_trn2) {
+            // Create line geometry
+            const points = [
+                new THREE.Vector3(o_trn.n_trn_x, o_trn.n_trn_y, 0),
+                new THREE.Vector3(o_trn2.n_trn_x, o_trn2.n_trn_y, 0)
+            ];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geometry, lineMaterial);
+            scene.add(line);
+            
+        } else if (o_item.o_trn && o_item.n_radius && !o_item.n_corners) {
+            // Create circle geometry
+            const segments = 64;
+            const geometry = new THREE.CircleGeometry(o_item.n_radius, segments);
+            const circle = new THREE.Mesh(geometry, material);
+            circle.position.set(o_trn.n_trn_x, o_trn.n_trn_y, 0);
+            scene.add(circle);
+            
+        } else if (o_item.o_trn && o_item.n_radius && o_item.n_corners) {
+            // Create regular polygon geometry
+            const shape = new THREE.Shape();
+            const vertices = createRegularPolygon(
+                o_trn.n_trn_x,
+                o_trn.n_trn_y,
+                o_item.n_radius,
+                o_item.n_corners,
+                o_item.n_offset_radians
+            );
+            
+            // Start the shape at the first vertex
+            shape.moveTo(vertices[0].x, vertices[0].y);
+            
+            // Add the rest of the vertices
+            for (let i = 1; i < vertices.length; i++) {
+                shape.lineTo(vertices[i].x, vertices[i].y);
+            }
+            
+            // Create geometry from shape
+            const geometry = new THREE.ShapeGeometry(shape);
+            const polygon = new THREE.Mesh(geometry, material);
+            polygon.position.z = 0;
+            scene.add(polygon);
+        }
+    });
+
+    // Adjust camera to fit all objects
+    fitCameraToObject(camera, scene, renderer);
 }
 
 function drawObjectsToDXFAndSVG(a_o_items) {
@@ -614,7 +803,7 @@ function drawObjectsToDXFAndSVG(a_o_items) {
             //     new o_mod.Line(o_dxf, ,o_trn2.n_trn_x, o_trn2.n_trn_y)
             // );
             o_dxf.addLine(o_mod.point3d(o_trn.n_trn_x, o_trn.n_trn_y), o_mod.point3d(o_trn2.n_trn_x, o_trn2.n_trn_y))
-
+            // add three line here... if multiple lines are connected a tubemesh could be used?
             // Draw line to SVG
             const line = document.createElementNS(svgNS, "line");
             line.setAttribute("x1", o_trn.n_trn_x);
@@ -629,7 +818,7 @@ function drawObjectsToDXFAndSVG(a_o_items) {
             //     new o_mod.Circle(o_dxf, o_trn.n_trn_x, o_trn.n_trn_y, o_item.n_radius),
             // );
             o_dxf.addCircle(o_mod.point3d(o_trn.n_trn_x, o_trn.n_trn_y), o_item.n_radius)
-
+            // add three circle here 
             // Draw circle to SVG
             const circle = document.createElementNS(svgNS, "circle");
             circle.setAttribute("cx", o_trn.n_trn_x);
@@ -657,6 +846,7 @@ function drawObjectsToDXFAndSVG(a_o_items) {
             o_dxf.addLWPolyline(
                 vertices.map(v => { return {point:o_mod.point2d(v.x, v.y)}})
             );
+            // add three polyline here
 
             // o_dxf.addPolyLine(vertices.map(v => o_mod.point3d(v.x,v.y)));
             // Draw regular polygon to SVG
@@ -668,8 +858,35 @@ function drawObjectsToDXFAndSVG(a_o_items) {
             g.appendChild(polygon); // Append to the transformed group
         }
     });
-}
 
+    createThreeJSObjects(a_o_items);
+
+}
+function fitCameraToObject(camera, scene, renderer) {
+    const box = new THREE.Box3().setFromObject(scene);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    
+    // Find the maximum dimension
+    const maxDim = Math.max(size.x, size.y);
+    const fov = camera.fov * (Math.PI / 180);
+    let cameraZ = Math.abs(maxDim / 2 * Math.tan(fov * 2));
+    
+    // Add some padding
+    cameraZ *= 1.5;
+    
+    camera.position.z = cameraZ;
+    camera.position.x = center.x;
+    camera.position.y = center.y;
+    
+    camera.lookAt(center);
+    
+    // Update controls if they exist
+    if (controls) {
+        controls.target.copy(center);
+        controls.update();
+    }
+}
 // Function to create a regular polygon
 function createRegularPolygon(x, y, radius, corners, n_offset_radians = 0) {
     const vertices = [];
@@ -686,6 +903,16 @@ function createRegularPolygon(x, y, radius, corners, n_offset_radians = 0) {
 // import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm';
 
 
+let f_update_rendering = function(){
+    console.log('Content changed:', o_monaco_editor.getValue());
+    let s = o_monaco_editor.getValue();
+    let s_f = `(${s})()`;
+    console.log(s_f)  
+    let a_o = eval(s_f);
+
+    console.log(a_o)
+    drawObjectsToDXFAndSVG(a_o)
+}
 // require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.33.0/min/vs' }});
 // require.config({ paths: { 'vs': './monaco-editor-0.52.2/package/min/vs' }});
 require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs' }});
@@ -699,14 +926,7 @@ require(['vs/editor/editor.main'], function() {
     });
     // Listen for content changes
     o_monaco_editor.onDidChangeModelContent((event) => {
-        console.log('Content changed:', o_monaco_editor.getValue());
-        let s = o_monaco_editor.getValue();
-        let s_f = `(${s})()`;
-        console.log(s_f)  
-        let a_o = eval(s_f);
-
-        console.log(a_o)
-        drawObjectsToDXFAndSVG(a_o)
+        f_update_rendering();
 
     });
     f_update_from_o_function(o_state.o_function)
@@ -766,3 +986,33 @@ let f_a_o = function(){
 // link.href = URL.createObjectURL(blob);
 // link.download = `atest.dxf`;
 // link.click();
+
+// Create a scene, camera, and renderer
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111); // Dark background for contrast
+
+const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000); // Aspect ratio 1 for square canvas
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(500, 500);
+document.querySelector('#canvas')?.appendChild(renderer.domElement);
+
+// Add lights
+const ambientLight = new THREE.AmbientLight(0x404040);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+directionalLight.position.set(1, 1, 1);
+scene.add(directionalLight);
+
+// Add orbit controls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.25;
+
+// Animation loop
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+animate();
