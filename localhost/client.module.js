@@ -11,13 +11,14 @@ import {
     f_o_proxified_and_add_listeners
 } from "https://deno.land/x/handyhelpers@5.1.96/mod.js"
 
-import * as THREE from '/three/build/three.module.min.js';
-// import { OrbitControls } from '/three/build/three.module.min.js';
-import {OrbitControls} from '/three/OrbitControls.js';
-// import * as o_mod2 from 'https://aitne:8443/three/examples/jsm/controls/OrbitControls.js';
+import * as THREE from '/three.js-r126/build/three.module.js';
+// import { OrbitControls } from '/three/OrbitControls.js';
+import { OrbitControls } from '/three.js-r126/examples/jsm/controls/OrbitControls.js';
+import { STLExporter } from '/three.js-r126/examples/jsm/exporters/STLExporter.js';
+// import { STLExporter } from '/three/STLExporter.js';
+// if you need more addons/examples download from here...
+//  
 
-// console.log(o_mod2);
-// debugger
 
 o_variables.n_rem_font_size_base = 1. // adjust font size, other variables can also be adapted before adding the css to the dom
 o_variables.n_rem_padding_interactive_elements = 0.5; // adjust padding for interactive elements 
@@ -68,6 +69,20 @@ let o_state = f_o_proxified_and_add_listeners(
         s_name: "asdf",// ugly work around
         o_function: null,
         a_o_function:[
+            {
+                s_name: "line", 
+                s_function:`function(){
+                    let f_o_vec2 = function(n_trn_x, n_trn_y){return {n_trn_x, n_trn_y}}
+                    let f_o_line = function(o_trn, o_trn2){return {o_trn, o_trn2}}
+                    let f_o_circle = function(o_trn, n_radius){return {o_trn, n_radius}}
+                    let f_o_reg_poly = function(o_trn, n_radius, n_corners, n_offset_radians){return {o_trn, n_radius, n_corners, n_offset_radians}}
+                
+                
+                    return [
+                        f_o_line(f_o_vec2(0,0), f_o_vec2(200,200)),
+                    ]
+                }`
+            },
             {
                 s_name: 'star', 
                 s_function:`function(){
@@ -501,6 +516,8 @@ let o = await f_o_html_from_o_js(
                                     link.href = URL.createObjectURL(blob);
                                     link.download = `${o_state.s_name}.dxf`;
                                     link.click();
+                                    f_export_stl();
+
 
                                 }
                             }, 
@@ -582,11 +599,183 @@ let f_a_o_item = function(){
         })
     ]
 }
+// Creates a solid cylinder between two points
+function f_create_solid_cylinder(o_start, o_end, n_radius = 0.5, material) {
+    const start = new THREE.Vector3(o_start.n_trn_x, o_start.n_trn_y, 0);
+    const end = new THREE.Vector3(o_end.n_trn_x, o_end.n_trn_y, 0);
+    
+    const length = start.distanceTo(end);
+    const center = new THREE.Vector3().lerpVectors(start, end, 0.5);
+    
+    const geometry = new THREE.CylinderGeometry(
+        n_radius, n_radius, length, 16, 1, true
+    );
+    
+    const cylinder = new THREE.Mesh(geometry, material);
+    cylinder.position.copy(center);
+    cylinder.lookAt(end);
+    cylinder.rotation.x = Math.PI / 2;
+    
+    return cylinder;
+}
+
+// Creates a sphere to cap joints
+function f_create_joint_sphere(o_point, n_radius = 0.5, material) {
+    const geometry = new THREE.SphereGeometry(n_radius, 16, 16);
+    const sphere = new THREE.Mesh(geometry, material);
+    sphere.position.set(o_point.n_trn_x, o_point.n_trn_y, 0);
+    return sphere;
+}
+// function f_create_solid_tube(a_o_points, n_radius = 0.5, n_segments = 8) {
+//     const a_points = a_o_points.map(o => new THREE.Vector3(o.n_trn_x, o.n_trn_y, 0));
+//     const o_curve = new THREE.CatmullRomCurve3(a_points);
+    
+//     // Extrude a circle along the curve to create a solid tube
+//     const shape = new THREE.Shape();
+//     shape.absarc(0, 0, n_radius, 0, Math.PI * 2); // Circular cross-section
+    
+//     const extrudeSettings = {
+//         steps: 100,                  // Smoothness along the curve
+//         bevelEnabled: false,         // No bevels
+//         extrudePath: o_curve         // Follow the curve path
+//     };
+    
+//     return new THREE.ExtrudeGeometry(shape, extrudeSettings);
+// }
+
+
+// 1. SAFE GEOMETRY CREATION (REVISED)
+function f_create_solid_tube(a_o_points, n_radius = 0.5) {
+    if (!a_o_points || a_o_points.length < 2) {
+        console.warn("Invalid points array for tube creation");
+        return null;
+    }
+
+    try {
+        // Convert points to Vector3
+        const points = a_o_points.map(p => {
+            if (!p || p.n_trn_x === undefined || p.n_trn_y === undefined) {
+                throw new Error("Invalid point data");
+            }
+            return new THREE.Vector3(p.n_trn_x, p.n_trn_y, 0);
+        });
+
+        // Create curve path
+        const curve = new THREE.CatmullRomCurve3(points);
+        const shape = new THREE.Shape();
+        shape.absarc(0, 0, n_radius, 0, Math.PI * 2);
+
+        // Extrusion settings
+        const extrudeSettings = {
+            steps: 100,
+            bevelEnabled: false,
+            extrudePath: curve
+        };
+
+        const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        geometry.computeBoundingBox(); // Critical for camera fitting
+        
+        return geometry;
+    } catch (e) {
+        console.error("Tube creation failed:", e);
+        return null;
+    }
+}
+
+function createCylinderBetweenPoints(point1, point2, radius, material) {
+    const p1 = new THREE.Vector3(point1.n_trn_x, point1.n_trn_y, 0);
+    const p2 = new THREE.Vector3(point2.n_trn_x, point2.n_trn_y, 0);
+
+    // Calculate the midpoint
+    const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+
+    // Compute the direction vector
+    const direction = new THREE.Vector3().subVectors(p2, p1);
+    const length = direction.length();
+
+    // Create cylinder geometry
+    const geometry = new THREE.CylinderGeometry(radius, radius, length, 16);
+    const cylinder = new THREE.Mesh(geometry, material);
+
+    // Align cylinder with the direction
+    cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize());
+
+    // Position it at the midpoint
+    cylinder.position.copy(midPoint);
+
+    return cylinder;
+}
+
+function f_create_capped_solid_tube(a_o_points, n_radius = 0.5, material) {
+    const tube = f_create_solid_tube(a_o_points, n_radius);
+    
+    // Create end caps
+    const capGeometry = new THREE.CircleGeometry(n_radius, 32);
+    
+    // Start cap
+    const startCap = new THREE.Mesh(capGeometry, material);
+    startCap.position.copy(a_o_points[0]);
+    startCap.lookAt(a_o_points[1]);
+    startCap.rotation.x = Math.PI / 2; // Rotate to face the path
+    
+    // End cap
+    const endCap = new THREE.Mesh(capGeometry, material);
+    endCap.position.copy(a_o_points[a_o_points.length - 1]);
+    endCap.lookAt(a_o_points[a_o_points.length - 2]);
+    endCap.rotation.x = Math.PI / 2;
+    
+    // Combine into a single mesh
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(tube, material));
+    group.add(startCap);
+    group.add(endCap);
+    
+    return group;
+}
 // Creates a tube along a path (for lines/polygon edges)
 function f_create_tube(a_o_points, n_radius = 0.5, n_segments = 8) {
     const a_points = a_o_points.map(o => new THREE.Vector3(o.n_trn_x, o.n_trn_y, 0));
     const o_curve = new THREE.CatmullRomCurve3(a_points);
     return new THREE.TubeGeometry(o_curve, 20, n_radius, n_segments, false);
+}
+
+function createThickLine(scene, points, thickness) {
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide });
+    const geometry = new THREE.BufferGeometry();
+    
+    const p1 = new THREE.Vector2(points[0].x, points[0].y);
+    const p2 = new THREE.Vector2(points[1].x, points[1].y);
+    
+    // Compute perpendicular vector
+    const direction = new THREE.Vector2().subVectors(p2, p1).normalize();
+    const perpendicular = new THREE.Vector2(-direction.y, direction.x).multiplyScalar(thickness / 2);
+    
+    // Define four corner points
+    const v1 = new THREE.Vector3(p1.x + perpendicular.x, p1.y + perpendicular.y, 0);
+    const v2 = new THREE.Vector3(p1.x - perpendicular.x, p1.y - perpendicular.y, 0);
+    const v3 = new THREE.Vector3(p2.x + perpendicular.x, p2.y + perpendicular.y, 0);
+    const v4 = new THREE.Vector3(p2.x - perpendicular.x, p2.y - perpendicular.y, 0);
+    
+    // Define vertices and indices
+    const vertices = new Float32Array([
+        v1.x, v1.y, v1.z,
+        v2.x, v2.y, v2.z,
+        v3.x, v3.y, v3.z,
+        v4.x, v4.y, v4.z
+    ]);
+    
+    const indices = [0, 1, 2, 1, 3, 2];
+    
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    
+    const mesh = new THREE.Mesh(geometry, material);
+    if (!geometry.attributes.position || geometry.attributes.position.count === 0) {
+        console.error("Invalid geometry: no vertices found");
+        return;
+    }
+    scene.add(mesh);
+    return mesh;
 }
 
 // Creates a torus (for circles)
@@ -596,8 +785,47 @@ function f_create_torus(o_center, n_radius, n_thickness = 0.5, n_segments = 32, 
     o_mesh.position.set(o_center.n_trn_x, o_center.n_trn_y, 0);
     return o_mesh;
 }
+function f_export_stl() {
+    const exporter = new STLExporter();
+    
+    // Option 1: Export all meshes as separate objects in one STL
+    let stlString = '';
+    scene.traverse((child) => {
+        if (child.isMesh) {
+            stlString += exporter.parse(child, { binary: false });
+        }
+    });
 
+    // // Option 2: Merge geometries first (better for single solid)
+    // const mergedGeometry = new THREE.BufferGeometry();
+    // const meshes = [];
+    
+    // scene.traverse((child) => {
+    //     if (child.isMesh) {
+    //         meshes.push(child);
+    //     }
+    // });
 
+    // if (meshes.length > 0) {
+    //     // Apply world transforms and merge
+    //     meshes.forEach(mesh => {
+    //         mesh.updateMatrixWorld();
+    //         const geometry = mesh.geometry.clone();
+    //         geometry.applyMatrix4(mesh.matrixWorld);
+    //         mergedGeometry.merge(geometry);
+    //     });
+
+    //     const mergedMesh = new THREE.Mesh(mergedGeometry);
+    //     stlString = exporter.parse(mergedMesh, { binary: false });
+    // }
+
+    // Download
+    const blob = new Blob([stlString], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'design.stl';
+    link.click();
+}
 
 
 function createThreeJSObjects(a_o_items) {
@@ -636,8 +864,8 @@ function createThreeJSObjects(a_o_items) {
 
         // Case 1: Line → Tube
         if (o_item.o_trn && o_item.o_trn2) {
-            const o_geometry = f_create_tube([o_item.o_trn, o_item.o_trn2], o_state.n_thickness);
-            scene.add(new THREE.Mesh(o_geometry, material));
+            let o_cyl = createCylinderBetweenPoints(o_item.o_trn, o_item.o_trn2, o_state.n_thickness, material);
+            scene.add(o_cyl);
         }
 
         // Case 2: Circle → Torus
@@ -659,8 +887,11 @@ function createThreeJSObjects(a_o_items) {
             for (let i = 0; i < a_vertices.length - 1; i++) {
                 const o_start = { n_trn_x: a_vertices[i].x, n_trn_y: a_vertices[i].y };
                 const o_end = { n_trn_x: a_vertices[i + 1].x, n_trn_y: a_vertices[i + 1].y };
-                const o_geometry = f_create_tube([o_start, o_end], o_state.n_thickness);
-                scene.add(new THREE.Mesh(o_geometry, material));
+                let o_cyl = createCylinderBetweenPoints(o_start, o_end, o_state.n_thickness, material);
+                scene.add(o_cyl);
+                
+                // const o_geometry = createThickLine(scene,[o_start, o_end], o_state.n_thickness);
+                // scene.add(new THREE.Mesh(o_geometry, material));
             }
         }
     });
@@ -668,93 +899,6 @@ function createThreeJSObjects(a_o_items) {
     fitCameraToObject(camera, scene, renderer);
 }
 
-function createThreeJSObjects2(a_o_items) {
-    // Clear existing objects (except lights)
-    scene.children.slice().forEach(child => {
-        if (!(child instanceof THREE.Light)) {
-            scene.remove(child);
-        }
-    });
-
-    // Center of the scene (similar to SVG)
-    const n_trn_x_center = 0;
-    const n_trn_y_center = 0;
-    
-    // Material for all objects
-    const material = new THREE.MeshBasicMaterial({ 
-        color: 0xffffff,
-        side: THREE.DoubleSide,
-        wireframe: true
-    });
-    
-    // Line material
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
-
-    a_o_items.forEach(o_item => {
-        // Convert coordinates (similar to SVG conversion)
-        let o_trn, o_trn2;
-        
-        if(o_item.o_trn){
-            o_trn = {
-                n_trn_x: o_item.o_trn.n_trn_x + n_trn_x_center,
-                n_trn_y: o_item.o_trn.n_trn_y + n_trn_y_center
-            };
-        }
-        if(o_item.o_trn2){
-            o_trn2 = {
-                n_trn_x: o_item.o_trn2.n_trn_x + n_trn_x_center,
-                n_trn_y: o_item.o_trn2.n_trn_y + n_trn_y_center
-            };
-        }
-
-        if (o_item.o_trn && o_item.o_trn2) {
-            // Create line geometry
-            const points = [
-                new THREE.Vector3(o_trn.n_trn_x, o_trn.n_trn_y, 0),
-                new THREE.Vector3(o_trn2.n_trn_x, o_trn2.n_trn_y, 0)
-            ];
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const line = new THREE.Line(geometry, lineMaterial);
-            scene.add(line);
-            
-        } else if (o_item.o_trn && o_item.n_radius && !o_item.n_corners) {
-            // Create circle geometry
-            const segments = 64;
-            const geometry = new THREE.CircleGeometry(o_item.n_radius, segments);
-            const circle = new THREE.Mesh(geometry, material);
-            circle.position.set(o_trn.n_trn_x, o_trn.n_trn_y, 0);
-            scene.add(circle);
-            
-        } else if (o_item.o_trn && o_item.n_radius && o_item.n_corners) {
-            // Create regular polygon geometry
-            const shape = new THREE.Shape();
-            const vertices = createRegularPolygon(
-                o_trn.n_trn_x,
-                o_trn.n_trn_y,
-                o_item.n_radius,
-                o_item.n_corners,
-                o_item.n_offset_radians
-            );
-            
-            // Start the shape at the first vertex
-            shape.moveTo(vertices[0].x, vertices[0].y);
-            
-            // Add the rest of the vertices
-            for (let i = 1; i < vertices.length; i++) {
-                shape.lineTo(vertices[i].x, vertices[i].y);
-            }
-            
-            // Create geometry from shape
-            const geometry = new THREE.ShapeGeometry(shape);
-            const polygon = new THREE.Mesh(geometry, material);
-            polygon.position.z = 0;
-            scene.add(polygon);
-        }
-    });
-
-    // Adjust camera to fit all objects
-    fitCameraToObject(camera, scene, renderer);
-}
 
 function drawObjectsToDXFAndSVG(a_o_items) {
     // Initialize DXF
@@ -1012,6 +1156,16 @@ controls.dampingFactor = 0.25;
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
+    // Clean up invalid objects
+    scene.traverse(child => {
+        if (child.isMesh && !child.geometry) {
+            scene.remove(child);
+        }
+    });
+
+    if (scene && camera && renderer) {
+        renderer.render(scene, camera);
+    }
     controls.update();
     renderer.render(scene, camera);
 }
