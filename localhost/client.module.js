@@ -70,6 +70,47 @@ let o_state = f_o_proxified_and_add_listeners(
         o_function: null,
         a_o_function:[
             {
+                s_name: 'seed_of_life',
+                s_function: `function() {
+                    let f_o_vec2 = function (n_trn_x, n_trn_y) { return { n_trn_x, n_trn_y } }
+                    let f_o_line = function (o_trn, o_trn2) { return { o_trn, o_trn2 } }
+                    let f_o_circle = function (o_trn, n_radius) { return { o_trn, n_radius } }
+                    let f_o_reg_poly = function (o_trn, n_radius, n_corners, n_offset_radians) { return { o_trn, n_radius, n_corners, n_offset_radians } }
+                
+                
+                    let a_o = [];
+                    let n_its = 6.;
+                    let n_tau = Math.PI * 2;
+                    let n_radius = 20.;
+                    for (let n_it = 0; n_it <= n_its; n_it += 1) {
+                        let n_it_nor = n_it / n_its;
+                        console.log({ n_it_nor })
+                        let n_amp = 20
+
+                        a_o.push(
+                            f_o_circle(
+                                f_o_vec2(
+                                    Math.sin(n_tau*n_it_nor)*n_amp, 
+                                    Math.cos(n_tau*n_it_nor)*n_amp
+                                ),
+                                n_radius
+                            )
+                        )
+                
+                    }
+                    a_o.push(
+                        f_o_circle(
+                                f_o_vec2(
+                                    0,0
+                                ),
+                                n_radius
+                            )
+                    )
+                    return a_o
+                
+                }` 
+            }
+            {
                 s_name: "line", 
                 s_function:`function(){
                     let f_o_vec2 = function(n_trn_x, n_trn_y){return {n_trn_x, n_trn_y}}
@@ -889,7 +930,6 @@ function createThreeJSObjects(a_o_items) {
                 const o_end = { n_trn_x: a_vertices[i + 1].x, n_trn_y: a_vertices[i + 1].y };
                 let o_cyl = createCylinderBetweenPoints(o_start, o_end, o_state.n_thickness, material);
                 scene.add(o_cyl);
-                
                 // const o_geometry = createThickLine(scene,[o_start, o_end], o_state.n_thickness);
                 // scene.add(new THREE.Mesh(o_geometry, material));
             }
